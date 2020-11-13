@@ -98,3 +98,37 @@ class KMeans:
         """
         dist = similarity_matrix(x, self.cluster_centers_)
         return torch.argmax(dist, dim=1), torch.sum(torch.max(dist, dim=1).values)
+
+    def fit(self, x):
+        """
+        Fits the centroids using the samples given w.r.t the metric.
+
+        Parameters
+        ----------
+        x : torch.Tensor of shape (n_samples, n_features)
+
+        Returns
+        -------
+        self
+        """
+        for itr in range(self.max_iter):
+            self.n_iter_ = itr
+            labels, inertia = self._assignment(x)
+            if self.inertia_ is not None and abs(self.inertia_ - inertia) < self.eps:
+                break
+            self.labels_ = labels
+            self.inertia_ = inertia
+            cluster_centers = torch.zeros(self.cluster_centers_.shape, dtype=self.cluster_centers_.dtype,
+                                          device=self.cluster_centers_.device)
+            cluster_count = np.zeros(self.n_clusters)
+            for i in range(x.size(0)):
+                cluster_centers[self.labels_[i], :] += x[i, :]
+                cluster_count[self.labels_[i]] += 1
+
+            for c in range(self.n_clusters):
+                cnt = cluster_count[c]
+                if cnt > 0:
+                    cluster_centers[c, :] /= cnt
+
+            self.cluster_centers_ = cluster_centers
+        return self
