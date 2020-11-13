@@ -2,6 +2,8 @@
 Torch-based K-Means
 by Ali Hassani
 """
+import random
+
 import numpy as np
 import torch
 from .utils import distance_matrix, similarity_matrix
@@ -17,8 +19,11 @@ class KMeans:
     n_clusters : int
         The number of clusters or `K`
 
-    init : torch.Tensor of shape (n_clusters, n_features)
+    init : 'random', 'k-means++' or torch.Tensor of shape (n_clusters, n_features)
         Initial centroid coordinates
+
+    n_init : int, default=10
+        Number of initializations, ignored if init is torch.Tensor.
 
     max_iter : int, default=200
         Maximum K-Means iterations
@@ -43,15 +48,66 @@ class KMeans:
     n_iter_ : int
         The number of training iterations
     """
-    def __init__(self, n_clusters, init, max_iter=200, spherical=False, eps=1e-6):
+    def __init__(self, n_clusters, init='k-means++', n_init=10, max_iter=200, spherical=False, eps=1e-6):
         self.n_clusters = n_clusters
-        self.cluster_centers_ = init
+        self.init_method = 'k-means++' if type(init) is not str else init
+        self.cluster_centers_ = init if type(init) is torch.Tensor else None
+        self.n_init = max(1, int(n_init))
         self.max_iter = max_iter
         self.labels_ = None
         self.inertia_ = 0
         self.n_iter_ = 0
         self.spherical = spherical
         self.eps = eps
+
+    def _initialize(self, x):
+        """
+        Initializes the centroid coordinates.
+
+        Parameters
+        ----------
+        x : torch.Tensor of shape (n_samples, n_features)
+
+        Returns
+        -------
+        self
+        """
+        if self.cluster_centers_ == 'k-means++':
+            return self._initialize_kpp(x)
+        elif self.cluster_centers_ == 'random':
+            return self._initialize_random(x)
+        else:
+            raise NotImplementedError("Initialization `{}` not supported.".format(self.cluster_centers_))
+
+    def _initialize_kpp(self, x):
+        """
+        Initializes the centroid coordinates using K-Means++.
+
+        Parameters
+        ----------
+        x : torch.Tensor of shape (n_samples, n_features)
+
+        Returns
+        -------
+        self
+        """
+        # TODO: Implement K-Means++
+        raise NotImplementedError("K-Means++ not implemented yet.")
+
+    def _initialize_random(self, x):
+        """
+        Initializes the centroid coordinates by randomly selecting from the training samples.
+
+        Parameters
+        ----------
+        x : torch.Tensor of shape (n_samples, n_features)
+
+        Returns
+        -------
+        self
+        """
+        self.cluster_centers_ = x[random.sample(range(x.size(0)), self.n_clusters), :]
+        return self
 
     def _assign(self, x):
         """
@@ -111,6 +167,25 @@ class KMeans:
         -------
         self
         """
+        if self.cluster_centers_ is None:
+            # TODO: Cleaner and faster multi-init implementation
+            self._initialize(x)
+            inertia_list = np.zeros(self.n_init, dtype=float)
+            n_iter_list = np.zeros(self.n_init, dtype=int)
+            centroid_list = []
+            label_list = []
+            for run in range(self.n_init):
+                self.fit(x)
+                inertia_list[run] = self.inertia_
+                n_iter_list[run] = self.n_iter_
+                centroid_list.append(self.cluster_centers_)
+                label_list.append(self.labels_)
+            best_idx = int(np.argmax(inertia_list) if self.spherical else np.argmin(inertia_list))
+            self.cluster_centers_ = centroid_list[best_idx]
+            self.n_iter_ = n_iter_list[best_idx]
+            self.inertia_ = inertia_list[best_idx]
+            return self
+
         for itr in range(self.max_iter):
             # TODO: Cleaner and faster K-Means implementation
             self.n_iter_ = itr
@@ -121,7 +196,7 @@ class KMeans:
             self.inertia_ = inertia
             cluster_centers = torch.zeros(self.cluster_centers_.shape, dtype=self.cluster_centers_.dtype,
                                           device=self.cluster_centers_.device)
-            cluster_count = np.zeros(self.n_clusters)
+            cluster_count = np.zeros(self.n_clusters, dtype=int)
             for i in range(x.size(0)):
                 cluster_centers[self.labels_[i], :] += x[i, :]
                 cluster_count[self.labels_[i]] += 1
