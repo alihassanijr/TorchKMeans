@@ -53,7 +53,7 @@ class KMeans:
         self.spherical = spherical
         self.eps = eps
 
-    def _assignment(self, x):
+    def _assign(self, x):
         """
         Takes a set of samples and assigns them to the clusters w.r.t the centroid coordinates and metric.
 
@@ -112,8 +112,9 @@ class KMeans:
         self
         """
         for itr in range(self.max_iter):
+            # TODO: Cleaner and faster K-Means implementation
             self.n_iter_ = itr
-            labels, inertia = self._assignment(x)
+            labels, inertia = self._assign(x)
             if self.inertia_ is not None and abs(self.inertia_ - inertia) < self.eps:
                 break
             self.labels_ = labels
@@ -132,3 +133,32 @@ class KMeans:
 
             self.cluster_centers_ = cluster_centers
         return self
+
+    def transform(self, x):
+        """
+        Assigns the samples given to the clusters w.r.t the centroid coordinates and metric.
+
+        Parameters
+        ----------
+        x : torch.Tensor of shape (n_samples, n_features)
+
+        Returns
+        -------
+        labels : torch.Tensor of shape (n_samples,)
+        """
+        return self._assign(x)
+
+    def fit_transform(self, x):
+        """
+        Fits the centroids using the samples given w.r.t the metric, returns the final assignments.
+
+        Parameters
+        ----------
+        x : torch.Tensor of shape (n_samples, n_features)
+
+        Returns
+        -------
+        labels : torch.Tensor of shape (n_samples,)
+        """
+        self.fit(x)
+        return self.labels_
