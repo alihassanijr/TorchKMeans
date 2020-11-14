@@ -93,7 +93,7 @@ class KMeans:
         -------
         self
         """
-        return k_means_pp(x, self.n_clusters)
+        return k_means_pp(x, n_clusters=self.n_clusters, x_norm=self.x_norm)
 
     def _initialize_random(self, x):
         """
