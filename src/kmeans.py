@@ -6,7 +6,7 @@ import random
 
 import numpy as np
 import torch
-from .utils import distance_matrix, similarity_matrix
+from .utils import distance_matrix, similarity_matrix, squared_norm, row_norm
 
 
 class KMeans:
@@ -58,6 +58,7 @@ class KMeans:
         self.inertia_ = 0
         self.n_iter_ = 0
         self.spherical = spherical
+        self.x_norm = None
         self.eps = eps
 
     def _initialize(self, x):
@@ -167,6 +168,8 @@ class KMeans:
         -------
         self
         """
+        if self.x_norm is None:
+            self.x_norm = row_norm(x) if self.spherical else squared_norm(x)
         if self.cluster_centers_ is None:
             # TODO: Cleaner and faster multi-init implementation
             self._initialize(x)
