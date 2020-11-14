@@ -1,6 +1,8 @@
 """
-Torch-based K-Means++
+Torch-based K-Means
 by Ali Hassani
+
+K-Means++ initializer
 """
 import numpy as np
 import torch

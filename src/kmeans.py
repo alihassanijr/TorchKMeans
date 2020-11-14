@@ -1,6 +1,8 @@
 """
 Torch-based K-Means
 by Ali Hassani
+
+K-Means
 """
 import random
 
