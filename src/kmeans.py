@@ -140,7 +140,7 @@ class KMeans:
         -------
         labels : torch.Tensor of shape (n_samples,)
         """
-        dist = distance_matrix(x, self.cluster_centers_)
+        dist = distance_matrix(x, self.cluster_centers_, x_norm=self.x_norm)
         return torch.argmin(dist, dim=1), torch.sum(torch.min(dist, dim=1).values)
 
     def _spherical_assignment(self, x):
@@ -155,7 +155,9 @@ class KMeans:
         -------
         labels : torch.Tensor of shape (n_samples,)
         """
-        dist = similarity_matrix(x, self.cluster_centers_)
+        if self.x_norm is None:
+            self.x_norm = row_norm(x)
+        dist = similarity_matrix(self.x_norm, row_norm(self.cluster_centers_), pre_normalized=True)
         return torch.argmax(dist, dim=1), torch.sum(torch.max(dist, dim=1).values)
 
     def fit(self, x):
@@ -189,6 +191,7 @@ class KMeans:
             self.cluster_centers_ = centroid_list[best_idx]
             self.n_iter_ = n_iter_list[best_idx]
             self.inertia_ = inertia_list[best_idx]
+            self.x_norm = None
             return self
 
         for itr in range(self.max_iter):
@@ -203,7 +206,7 @@ class KMeans:
             self.inertia_ = inertia
             for c in range(self.n_clusters):
                 self.cluster_centers_[c, :] = torch.mean(x[torch.where(labels == c), :], dim=0)
-
+        self.x_norm = None
         return self
 
     def transform(self, x):
