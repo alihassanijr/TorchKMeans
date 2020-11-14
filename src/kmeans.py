@@ -4,8 +4,8 @@ by Ali Hassani
 
 K-Means
 """
-import random
 
+import random
 import numpy as np
 import torch
 from .utils import distance_matrix, similarity_matrix, squared_norm, row_norm

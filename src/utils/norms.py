@@ -4,6 +4,7 @@ by Ali Hassani
 
 Norm utils
 """
+
 from torch.nn import functional as F
 
 

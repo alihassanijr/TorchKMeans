@@ -4,6 +4,7 @@ by Ali Hassani
 
 Metric utils
 """
+
 import torch
 from .norms import squared_norm, row_norm
 from .validations import distance_validation, similarity_validation
