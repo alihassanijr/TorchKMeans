@@ -2,72 +2,11 @@
 Torch-based K-Means
 by Ali Hassani
 
-Common util functions
+Metric utils
 """
 import torch
-from torch.nn import functional as F
-
-
-def distance_clamp(x):
-    """
-    Clamps the distance matrix to prevent invalid values.
-
-    Parameters
-    ----------
-    x : torch.Tensor
-
-    Returns
-    -------
-    x_out : torch.Tensor
-    """
-    return torch.clamp_min(x, 0.0)
-
-
-def similarity_clamp(x):
-    """
-    Clamps the similarity matrix to prevent invalid values.
-
-    Parameters
-    ----------
-    x : torch.Tensor
-
-    Returns
-    -------
-    x_out : torch.Tensor
-    """
-    return torch.clamp(x, 0.0, 1.0)
-
-
-def squared_norm(x):
-    """
-    Computes and returns the squared norm of the input 2d tensor on dimension 1.
-    Useful for computing euclidean distance matrix.
-
-    Parameters
-    ----------
-    x : torch.Tensor of shape (n, m)
-
-    Returns
-    -------
-    x_squared_norm : torch.Tensor of shape (n, )
-    """
-    return (x ** 2).sum(1).view(-1, 1)
-
-
-def row_norm(x):
-    """
-    Computes and returns the row-normalized version of the input 2d tensor.
-    Useful for computing cosine similarity matrix.
-
-    Parameters
-    ----------
-    x : torch.Tensor of shape (n, m)
-
-    Returns
-    -------
-    x_normalized : torch.Tensor of shape (n, m)
-    """
-    return F.normalize(x, p=2, dim=1)
+from .norms import squared_norm, row_norm
+from .validations import distance_validation, similarity_validation
 
 
 def distance_matrix(x, y, x_norm=None, y_norm=None):
@@ -88,7 +27,7 @@ def distance_matrix(x, y, x_norm=None, y_norm=None):
     x_norm = squared_norm(x) if x_norm is None else x_norm
     y_norm = squared_norm(y) if y_norm is None else y_norm.T
     mat = x_norm + y_norm - 2.0 * torch.mm(x, y.T)
-    return distance_clamp(mat)
+    return distance_validation(mat)
 
 
 def self_distance_matrix(x):
@@ -103,7 +42,7 @@ def self_distance_matrix(x):
     -------
     distance_matrix : torch.Tensor of shape (n, n)
     """
-    return distance_clamp(((x.unsqueeze(0) - x.unsqueeze(1)) ** 2).sum(2))
+    return distance_validation(((x.unsqueeze(0) - x.unsqueeze(1)) ** 2).sum(2))
 
 
 def similarity_matrix(x, y, pre_normalized=False):
@@ -122,8 +61,8 @@ def similarity_matrix(x, y, pre_normalized=False):
     similarity_matrix : torch.Tensor of shape (n, p)
     """
     if pre_normalized:
-        return similarity_clamp(x.matmul(y.T))
-    return similarity_clamp(row_norm(x).matmul(row_norm(y).T))
+        return similarity_validation(x.matmul(y.T))
+    return similarity_validation(row_norm(x).matmul(row_norm(y).T))
 
 
 def self_similarity_matrix(x, pre_normalized=False):
@@ -141,6 +80,6 @@ def self_similarity_matrix(x, pre_normalized=False):
     similarity_matrix : torch.Tensor of shape (n, n)
     """
     if pre_normalized:
-        return similarity_clamp(x.matmul(x.T))
+        return similarity_validation(x.matmul(x.T))
     x_normalized = row_norm(x)
-    return similarity_clamp(x_normalized.matmul(x_normalized.T))
+    return similarity_validation(x_normalized.matmul(x_normalized.T))
