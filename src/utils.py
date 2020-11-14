@@ -18,6 +18,10 @@ def squared_norm(x):
     return (x ** 2).sum(1).view(-1, 1)
 
 
+def row_norm(x):
+    return F.normalize(x, p=2, dim=1)
+
+
 def distance_matrix(x, y, x_norm=None, y_norm=None):
     x_norm = squared_norm(x) if x_norm is None else x_norm
     y_norm = squared_norm(y) if y_norm is None else y_norm.T
@@ -32,11 +36,11 @@ def self_distance_matrix(x):
 def similarity_matrix(x, y, pre_normalized=False):
     if pre_normalized:
         return similarity_clamp(x.matmul(y.T))
-    return similarity_clamp(F.normalize(x, p=2, dim=1).matmul(F.normalize(y, p=2, dim=1).T))
+    return similarity_clamp(row_norm(x).matmul(row_norm(y).T))
 
 
 def self_similarity_matrix(x, pre_normalized=False):
     if pre_normalized:
         return similarity_clamp(x.matmul(x.T))
-    x_normalized = F.normalize(x, p=2, dim=1)
+    x_normalized = row_norm(x)
     return similarity_clamp(x_normalized.matmul(x_normalized.T))
