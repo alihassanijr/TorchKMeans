@@ -4,6 +4,7 @@ by Ali Hassani
 
 K-Means++ initializer
 """
+
 import numpy as np
 import torch
 from .utils import distance_matrix, squared_norm
@@ -36,7 +37,8 @@ def k_means_pp(x, n_clusters, x_norm=None):
     initial_centroid_idx = torch.randint(low=0, high=n_samples, size=(1,))[0]
     centroids[0, :] = x[initial_centroid_idx, :]
 
-    dist_mat = distance_matrix(x=centroids[0, :].unsqueeze(0), y=x, y_norm=x_norm)
+    dist_mat = distance_matrix(x=centroids[0, :].unsqueeze(0), y=x,
+                               x_norm=x_norm[initial_centroid_idx, :].unsqueeze(0), y_norm=x_norm)
     current_potential = dist_mat.sum(1)
 
     for c in range(1, n_clusters):
@@ -44,7 +46,8 @@ def k_means_pp(x, n_clusters, x_norm=None):
         candidate_ids = torch.searchsorted(torch.cumsum(dist_mat.squeeze(0), dim=0), rand_vals)
         torch.clamp_max(candidate_ids, dist_mat.size(1) - 1, out=candidate_ids)
 
-        distance_to_candidates = distance_matrix(x=x[candidate_ids, :], y=x, y_norm=x_norm)
+        distance_to_candidates = distance_matrix(x=x[candidate_ids, :], y=x,
+                                                 x_norm=x_norm[candidate_ids, :], y_norm=x_norm)
 
         # TODO: torch implementation
         distance_to_candidates = torch.from_numpy(np.minimum(dist_mat.numpy(), distance_to_candidates.numpy()))
