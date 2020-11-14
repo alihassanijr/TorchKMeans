@@ -196,22 +196,14 @@ class KMeans:
             self.n_iter_ = itr
             labels, inertia = self._assign(x)
             if self.inertia_ is not None and abs(self.inertia_ - inertia) < self.eps:
+                self.labels_ = labels
+                self.inertia_ = inertia
                 break
             self.labels_ = labels
             self.inertia_ = inertia
-            cluster_centers = torch.zeros(self.cluster_centers_.shape, dtype=self.cluster_centers_.dtype,
-                                          device=self.cluster_centers_.device)
-            cluster_count = np.zeros(self.n_clusters, dtype=int)
-            for i in range(x.size(0)):
-                cluster_centers[self.labels_[i], :] += x[i, :]
-                cluster_count[self.labels_[i]] += 1
-
             for c in range(self.n_clusters):
-                cnt = cluster_count[c]
-                if cnt > 0:
-                    cluster_centers[c, :] /= cnt
+                self.cluster_centers_[c, :] = torch.mean(x[torch.where(labels == c), :], dim=0)
 
-            self.cluster_centers_ = cluster_centers
         return self
 
     def transform(self, x):
