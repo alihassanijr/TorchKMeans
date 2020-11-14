@@ -7,6 +7,7 @@ import random
 import numpy as np
 import torch
 from .utils import distance_matrix, similarity_matrix, squared_norm, row_norm
+from ._kmeanspp import k_means_pp
 
 
 class KMeans:
@@ -92,8 +93,7 @@ class KMeans:
         -------
         self
         """
-        # TODO: Implement K-Means++
-        raise NotImplementedError("K-Means++ not implemented yet.")
+        return k_means_pp(x, self.n_clusters)
 
     def _initialize_random(self, x):
         """
