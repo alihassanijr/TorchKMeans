@@ -20,7 +20,7 @@ def k_means_pp(x, n_clusters, x_norm=None):
     ----------
     x : torch.Tensor of shape (n_training_samples, n_features)
     n_clusters : int
-    x_norm : torch.Tensor of shape (n_training_samples, )
+    x_norm : torch.Tensor of shape (n_training_samples, ) or NoneType
 
     Returns
     -------

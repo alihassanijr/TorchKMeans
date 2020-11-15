@@ -61,41 +61,51 @@ class KMeans:
         self.inertia_ = 0
         self.n_iter_ = 0
         self.spherical = spherical
-        self.x_norm = None
+        self.center_norm = None
         self.eps = eps
 
-    def _initialize(self, x):
+    def _normalize(self, x):
+        return row_norm(x) if self.spherical else squared_norm(x)
+
+    def _initialize(self, x, x_norm):
         """
         Initializes the centroid coordinates.
 
         Parameters
         ----------
         x : torch.Tensor of shape (n_samples, n_features)
+        x_norm : torch.Tensor of shape (n_samples, ) or shape (n_samples, n_features), or NoneType
 
         Returns
         -------
         self
         """
+        self.labels_ = None
+        self.inertia_ = 0
+        self.n_iter_ = 0
         if self.init_method == 'k-means++':
-            return self._initialize_kpp(x)
+            self._initialize_kpp(x, x_norm)
         elif self.init_method == 'random':
-            return self._initialize_random(x)
+            self._initialize_random(x)
         else:
             raise NotImplementedError("Initialization `{}` not supported.".format(self.cluster_centers_))
+        self.center_norm = self._normalize(self.cluster_centers_)
+        return self
 
-    def _initialize_kpp(self, x):
+    def _initialize_kpp(self, x, x_norm):
         """
         Initializes the centroid coordinates using K-Means++.
 
         Parameters
         ----------
         x : torch.Tensor of shape (n_samples, n_features)
+        x_norm : torch.Tensor of shape (n_samples, ) or shape (n_samples, n_features), or NoneType
 
         Returns
         -------
         self
         """
-        self.cluster_centers_ = k_means_pp(x, n_clusters=self.n_clusters, x_norm=self.x_norm)
+        self.cluster_centers_ = k_means_pp(x, n_clusters=self.n_clusters, x_norm=x_norm if not self.spherical else None)
         return self
 
     def _initialize_random(self, x):
@@ -113,92 +123,90 @@ class KMeans:
         self.cluster_centers_ = x[random.sample(range(x.size(0)), self.n_clusters), :]
         return self
 
-    def _assign(self, x):
+    def _assign(self, x, x_norm=None):
         """
         Takes a set of samples and assigns them to the clusters w.r.t the centroid coordinates and metric.
 
         Parameters
         ----------
         x : torch.Tensor of shape (n_samples, n_features)
+        x_norm : torch.Tensor of shape (n_samples, ) or shape (n_samples, n_features), or NoneType
 
         Returns
         -------
         labels : torch.Tensor of shape (n_samples,)
         """
         if self.spherical:
-            return self._spherical_assignment(x)
-        return self._euclidean_assignment(x)
+            return self._spherical_assignment(x_norm)
+        return self._euclidean_assignment(x, x_norm)
 
-    def _euclidean_assignment(self, x):
+    def _euclidean_assignment(self, x, x_norm=None):
         """
         Takes a set of samples and assigns them using L2 norm to the clusters w.r.t the centroid coordinates.
 
         Parameters
         ----------
         x : torch.Tensor of shape (n_samples, n_features)
+        x_norm : torch.Tensor of shape (n_samples, ) or NoneType
 
         Returns
         -------
         labels : torch.Tensor of shape (n_samples,)
         """
-        dist = distance_matrix(x, self.cluster_centers_, x_norm=self.x_norm)
+        dist = distance_matrix(x, self.cluster_centers_, x_norm=x_norm, y_norm=self.center_norm)
         return torch.argmin(dist, dim=1), torch.sum(torch.min(dist, dim=1).values)
 
-    def _spherical_assignment(self, x):
+    def _spherical_assignment(self, x_norm):
         """
         Takes a set of samples and assigns them using cosine similarity to the clusters w.r.t the centroid coordinates.
 
         Parameters
         ----------
-        x : torch.Tensor of shape (n_samples, n_features)
+        x_norm : torch.Tensor of shape (n_samples, n_features)
 
         Returns
         -------
         labels : torch.Tensor of shape (n_samples,)
         """
-        if self.x_norm is None:
-            self.x_norm = row_norm(x)
-        dist = similarity_matrix(self.x_norm, row_norm(self.cluster_centers_), pre_normalized=True)
+        dist = similarity_matrix(x_norm, self.center_norm, pre_normalized=True)
         return torch.argmax(dist, dim=1), torch.sum(torch.max(dist, dim=1).values)
 
-    def fit(self, x):
+    def fit(self, x, x_norm=None):
         """
         Fits the centroids using the samples given w.r.t the metric.
 
         Parameters
         ----------
         x : torch.Tensor of shape (n_samples, n_features)
+        x_norm : torch.Tensor of shape (n_samples, ) or shape (n_samples, n_features), or NoneType
 
         Returns
         -------
         self
         """
-        if self.x_norm is None:
-            self.x_norm = row_norm(x) if self.spherical else squared_norm(x)
+        x_norm = x_norm if x_norm is not None else self._normalize(x)
         if self.cluster_centers_ is None:
-            # TODO: Cleaner and faster multi-init implementation
-            self._initialize(x)
             inertia_list = np.zeros(self.n_init, dtype=float)
             n_iter_list = np.zeros(self.n_init, dtype=int)
             centroid_list = []
             label_list = []
             for run in range(self.n_init):
-                self.fit(x)
+                self._initialize(x, x_norm)
+                self.fit(x, x_norm)
                 inertia_list[run] = self.inertia_
                 n_iter_list[run] = self.n_iter_
                 centroid_list.append(self.cluster_centers_)
                 label_list.append(self.labels_)
             best_idx = int(np.argmax(inertia_list) if self.spherical else np.argmin(inertia_list))
             self.cluster_centers_ = centroid_list[best_idx]
+            self.center_norm = self._normalize(self.cluster_centers_)
             self.n_iter_ = n_iter_list[best_idx]
             self.inertia_ = inertia_list[best_idx]
-            self.x_norm = None
             return self
 
         for itr in range(self.max_iter):
-            # TODO: Cleaner and faster K-Means implementation
             self.n_iter_ = itr
-            labels, inertia = self._assign(x)
+            labels, inertia = self._assign(x, x_norm)
             if self.inertia_ is not None and abs(self.inertia_ - inertia) < self.eps:
                 self.labels_ = labels
                 self.inertia_ = inertia
@@ -208,7 +216,7 @@ class KMeans:
             for c in range(self.n_clusters):
                 idx = torch.where(labels == c)[0]
                 self.cluster_centers_[c, :] = torch.mean(torch.index_select(x, 0, idx), dim=0)
-        self.x_norm = None
+            self.center_norm = self._normalize(self.cluster_centers_)
         return self
 
     def transform(self, x):
@@ -223,7 +231,7 @@ class KMeans:
         -------
         labels : torch.Tensor of shape (n_samples,)
         """
-        return self._assign(x)
+        return self._assign(x, self._normalize(x))
 
     def fit_transform(self, x):
         """
