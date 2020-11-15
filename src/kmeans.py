@@ -76,9 +76,9 @@ class KMeans:
         -------
         self
         """
-        if self.cluster_centers_ == 'k-means++':
+        if self.init_method == 'k-means++':
             return self._initialize_kpp(x)
-        elif self.cluster_centers_ == 'random':
+        elif self.init_method == 'random':
             return self._initialize_random(x)
         else:
             raise NotImplementedError("Initialization `{}` not supported.".format(self.cluster_centers_))
@@ -95,7 +95,8 @@ class KMeans:
         -------
         self
         """
-        return k_means_pp(x, n_clusters=self.n_clusters, x_norm=self.x_norm)
+        self.cluster_centers_ = k_means_pp(x, n_clusters=self.n_clusters, x_norm=self.x_norm)
+        return self
 
     def _initialize_random(self, x):
         """
@@ -205,7 +206,8 @@ class KMeans:
             self.labels_ = labels
             self.inertia_ = inertia
             for c in range(self.n_clusters):
-                self.cluster_centers_[c, :] = torch.mean(x[torch.where(labels == c), :], dim=0)
+                idx = torch.where(labels == c)[0]
+                self.cluster_centers_[c, :] = torch.mean(torch.index_select(x, 0, idx), dim=0)
         self.x_norm = None
         return self
 

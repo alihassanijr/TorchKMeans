@@ -26,7 +26,7 @@ def distance_matrix(x, y, x_norm=None, y_norm=None):
     distance_matrix : torch.Tensor of shape (n, p)
     """
     x_norm = squared_norm(x) if x_norm is None else x_norm
-    y_norm = squared_norm(y) if y_norm is None else y_norm.T
+    y_norm = squared_norm(y).T if y_norm is None else y_norm.T
     mat = x_norm + y_norm - 2.0 * torch.mm(x, y.T)
     return distance_validation(mat)
 
