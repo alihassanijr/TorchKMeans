@@ -30,7 +30,7 @@ def k_means_pp(x, n_clusters, x_norm=None):
         x_norm = squared_norm(x)
     n_samples, n_features = x.shape
 
-    centroids = torch.zeros((n_clusters, n_features))
+    centroids = torch.zeros((n_clusters, n_features), dtype=x.dtype, device=x.device)
 
     n_local_trials = 2 + int(np.log(n_clusters))
 
