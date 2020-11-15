@@ -56,7 +56,7 @@ class KMeans:
         self.n_clusters = n_clusters
         self.init_method = 'k-means++' if type(init) is not str else init
         self.cluster_centers_ = init if type(init) is torch.Tensor else None
-        self.n_init = max(1, int(n_init))
+        self.n_init = max(1, int(n_init)) if self.init_method != 'discern' else 1  # DISCERN is deterministic
         self.max_iter = max_iter
         self.labels_ = None
         self.inertia_ = 0
