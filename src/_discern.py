@@ -70,15 +70,13 @@ def discern(x, n_clusters=None, max_n_clusters=None, x_norm=None):
     if find_n_clusters:
         membership_values = membership_values[:ctr]
         # TODO: torch implementation
-        x = range(0, len(membership_values))
-        dy = np.gradient(membership_values, x)
-        d2y = np.gradient(dy, x)
+        rx = range(0, len(membership_values))
+        dy = np.gradient(membership_values, rx)
+        d2y = np.gradient(dy, rx)
         kappa = (d2y / ((1 + (dy ** 2)) ** (3 / 2)))
         predicted_n_clusters = int(np.argmin(kappa))
         n_clusters = max(predicted_n_clusters, 2)
 
     centroid_idx = centroid_idx[:n_clusters]
 
-    centroids = x[centroid_idx, :]
-
-    return centroids
+    return x[centroid_idx, :]

@@ -86,6 +86,8 @@ class KMeans:
         self.n_iter_ = 0
         if self.init_method == 'k-means++':
             self._initialize_kpp(x, x_norm)
+        elif self.init_method == 'discern':
+            self._initialize_discern(x, x_norm)
         elif self.init_method == 'random':
             self._initialize_random(x)
         else:
@@ -126,6 +128,7 @@ class KMeans:
         self
         """
         self.cluster_centers_ = discern(x, n_clusters=self.n_clusters, x_norm=x_norm if self.spherical else None)
+        self.n_clusters = self.cluster_centers_.size(0)
         return self
 
     def _initialize_random(self, x):
