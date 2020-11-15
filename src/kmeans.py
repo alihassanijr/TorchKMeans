@@ -10,6 +10,7 @@ import numpy as np
 import torch
 from .utils import distance_matrix, similarity_matrix, squared_norm, row_norm
 from ._kmeanspp import k_means_pp
+from ._discern import discern
 
 
 class KMeans:
@@ -19,10 +20,10 @@ class KMeans:
 
     Parameters
     ----------
-    n_clusters : int
-        The number of clusters or `K`
+    n_clusters : int or NoneType
+        The number of clusters or `K`. Set to None ONLY when init = 'discern'.
 
-    init : 'random', 'k-means++' or torch.Tensor of shape (n_clusters, n_features)
+    init : 'random', 'k-means++', 'discern' or torch.Tensor of shape (n_clusters, n_features)
         Initial centroid coordinates
 
     n_init : int, default=10
@@ -51,7 +52,7 @@ class KMeans:
     n_iter_ : int
         The number of training iterations
     """
-    def __init__(self, n_clusters, init='k-means++', n_init=10, max_iter=200, spherical=False, eps=1e-6):
+    def __init__(self, n_clusters=None, init='k-means++', n_init=10, max_iter=200, spherical=False, eps=1e-6):
         self.n_clusters = n_clusters
         self.init_method = 'k-means++' if type(init) is not str else init
         self.cluster_centers_ = init if type(init) is torch.Tensor else None
@@ -105,7 +106,26 @@ class KMeans:
         -------
         self
         """
+        if type(self.n_clusters) is not int:
+            raise NotImplementedError("K-Means++ expects the number of clusters, given {}.".format(type(
+                self.n_clusters)))
         self.cluster_centers_ = k_means_pp(x, n_clusters=self.n_clusters, x_norm=x_norm if not self.spherical else None)
+        return self
+
+    def _initialize_discern(self, x, x_norm):
+        """
+        Initializes the centroid coordinates using DISCERN.
+
+        Parameters
+        ----------
+        x : torch.Tensor of shape (n_samples, n_features)
+        x_norm : torch.Tensor of shape (n_samples, ) or shape (n_samples, n_features), or NoneType
+
+        Returns
+        -------
+        self
+        """
+        self.cluster_centers_ = discern(x, n_clusters=self.n_clusters, x_norm=x_norm if self.spherical else None)
         return self
 
     def _initialize_random(self, x):
@@ -120,6 +140,9 @@ class KMeans:
         -------
         self
         """
+        if type(self.n_clusters) is not int:
+            raise NotImplementedError("Randomized K-Means expects the number of clusters, given {}.".format(type(
+                self.n_clusters)))
         self.cluster_centers_ = x[random.sample(range(x.size(0)), self.n_clusters), :]
         return self
 
