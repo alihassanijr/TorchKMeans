@@ -293,7 +293,8 @@ class KMeans:
         -------
         labels : torch.Tensor of shape (n_samples,)
         """
-        return self._assign(x, self._normalize(x))
+        labels, _ = self._assign(x, self._normalize(x))
+        return labels
 
     def fit_transform(self, x):
         """
