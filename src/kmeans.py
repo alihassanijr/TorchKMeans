@@ -131,7 +131,10 @@ class _BaseKMeans:
         if callable(self.metric):
             dist = self.metric(x, self.cluster_centers_)
         else:
-            dist = similarity_matrix(x_norm, self.center_norm, pre_normalized=True)
+            dist = similarity_matrix(x_norm if x_norm is not None else self._normalize(x),
+                                     self.center_norm if self.center_norm is not None \
+                                         else self._normalize(self.cluster_centers_),
+                                     pre_normalized=True)
         return torch.argmax(dist, dim=1), torch.sum(torch.max(dist, dim=1).values)
 
 
@@ -273,7 +276,6 @@ class KMeans(_BaseKMeans):
         """
         self.inertia_ = None
         for itr in range(self.max_iter):
-            self.n_iter_ = itr
             labels, inertia = self._assign(x, x_norm)
             if self.inertia_ is not None and abs(self.inertia_ - inertia) < self.eps:
                 self.labels_ = labels
@@ -285,6 +287,7 @@ class KMeans(_BaseKMeans):
                 idx = torch.where(labels == c)[0]
                 self.cluster_centers_[c, :] = torch.mean(torch.index_select(x, 0, idx), dim=0)
             self.center_norm = self._normalize(self.cluster_centers_)
+        self.n_iter_ = itr + 1
         return self
 
     def transform(self, x):
