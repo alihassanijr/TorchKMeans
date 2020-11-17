@@ -1,10 +1,12 @@
-# TorchKMeans
-A torch-based implementation of K-Means and K-Means++
+# Torch-based K-Means
+A torch-based implementation of K-Means, MiniBatch K-Means, K-Means++ and more with customizable distance metrics,
+and similarity-based clustering.
 
 ## Notes
 Please note that this repository is still in WIP phase, but feel free to jump in.
 
-The goal is to reach the fastest and cleanest implementation of K-Means, K-Means++ and Mini-Batch K-Means using PyTorch only, so that we can benefit all the CUDA greatness.
+The goal is to reach the fastest and cleanest implementation of K-Means, K-Means++ and Mini-Batch K-Means using
+PyTorch for CUDA-enabled clustering.
 
 
 Here's the progress so far:
@@ -21,7 +23,7 @@ Here's the progress so far:
 
 :white_check_mark: Purity score
 
-:black_square_button: (Testing) MiniBatch K-Means
+:white_check_mark: MiniBatch K-Means
 
 :black_square_button: MiniBatch K-Means optimized by torch.optim
 
