@@ -98,7 +98,7 @@ class KMeans:
         if callable(self.init_method):
             self.cluster_centers_ = self.init_method(x)
             self.n_clusters = self.cluster_centers_.size(0)
-        if self.init_method == 'k-means++':
+        elif self.init_method == 'k-means++':
             self._initialize_kpp(x, x_norm)
         elif self.init_method == 'discern':
             self._initialize_discern(x, x_norm)
