@@ -16,7 +16,6 @@ from ._discern import discern
 class KMeans:
     """
     K-Means
-    Requires the number of clusters and the initial centroids
 
     Parameters
     ----------
@@ -32,13 +31,20 @@ class KMeans:
         deterministic.
 
     max_iter : int, default=200
-        Maximum K-Means iterations
+        Maximum K-Means iterations.
+
+    metric : 'default' or callable, default='default'
+        Distance metric when spherical=False and similarity metric otherwise. Default is 'default'
+        which uses L2 distance and cosine similarity as the distance and similarity metrics respectively.
+        WARNING: This metric does not apply to the pre-defined initialization methods (K-Means++ and DISCERN).
+        The callable metrics should take in two tensors of shapes (n, d) and (m, d) and return a tensor of
+        shape (n, m).
 
     spherical : bool, default=False
-        Whether to use cosine similarity as the assignment metric or not
+        Whether to use cosine similarity as the assignment metric or not.
 
     eps : float, default=1e-6
-        Threshold for early stopping
+        Threshold for early stopping.
 
     Attributes
     ----------
@@ -54,18 +60,21 @@ class KMeans:
     n_iter_ : int
         The number of training iterations
     """
-    def __init__(self, n_clusters=None, init='k-means++', n_init=10, max_iter=200, spherical=False, eps=1e-6):
+    def __init__(self, n_clusters=None, init='k-means++', n_init=10, max_iter=200, metric='default',
+                 spherical=False, eps=1e-6):
         self.n_clusters = n_clusters
         self.init_method = init if type(init) is str or callable(init) else 'k-means++'
         self.cluster_centers_ = init if type(init) is torch.Tensor else None
         self.n_init = max(1, int(n_init)) if self.init_method != 'discern' else 1  # DISCERN is deterministic
         self.max_iter = max_iter
+        self.metric = metric if callable(metric) else 'default'
+        self.spherical = spherical
+        self.eps = eps
+
+        self.center_norm = None
         self.labels_ = None
         self.inertia_ = 0
         self.n_iter_ = 0
-        self.spherical = spherical
-        self.center_norm = None
-        self.eps = eps
 
     def _normalize(self, x):
         return row_norm(x) if self.spherical else squared_norm(x)
@@ -168,12 +177,12 @@ class KMeans:
         labels : torch.Tensor of shape (n_samples,)
         """
         if self.spherical:
-            return self._spherical_assignment(x_norm)
-        return self._euclidean_assignment(x, x_norm)
+            return self._similarity_based_assignment(x, x_norm)
+        return self._distance_based_assignment(x, x_norm)
 
-    def _euclidean_assignment(self, x, x_norm=None):
+    def _distance_based_assignment(self, x, x_norm=None):
         """
-        Takes a set of samples and assigns them using L2 norm to the clusters w.r.t the centroid coordinates.
+        Takes a set of samples and assigns them using the metric to the clusters w.r.t the centroid coordinates.
 
         Parameters
         ----------
@@ -184,22 +193,29 @@ class KMeans:
         -------
         labels : torch.Tensor of shape (n_samples,)
         """
-        dist = distance_matrix(x, self.cluster_centers_, x_norm=x_norm, y_norm=self.center_norm)
+        if callable(self.metric):
+            dist = self.metric(x, self.cluster_centers_)
+        else:
+            dist = distance_matrix(x, self.cluster_centers_, x_norm=x_norm, y_norm=self.center_norm)
         return torch.argmin(dist, dim=1), torch.sum(torch.min(dist, dim=1).values)
 
-    def _spherical_assignment(self, x_norm):
+    def _similarity_based_assignment(self, x, x_norm):
         """
-        Takes a set of samples and assigns them using cosine similarity to the clusters w.r.t the centroid coordinates.
+        Takes a set of samples and assigns them using the metric to the clusters w.r.t the centroid coordinates.
 
         Parameters
         ----------
+        x : torch.Tensor of shape (n_samples, n_features)
         x_norm : torch.Tensor of shape (n_samples, n_features)
 
         Returns
         -------
         labels : torch.Tensor of shape (n_samples,)
         """
-        dist = similarity_matrix(x_norm, self.center_norm, pre_normalized=True)
+        if callable(self.metric):
+            dist = self.metric(x, self.cluster_centers_)
+        else:
+            dist = similarity_matrix(x_norm, self.center_norm, pre_normalized=True)
         return torch.argmax(dist, dim=1), torch.sum(torch.max(dist, dim=1).values)
 
     def fit(self, x):
