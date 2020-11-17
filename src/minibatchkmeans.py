@@ -2,7 +2,17 @@
 Torch-based K-Means
 by Ali Hassani
 
-K-Means
+MiniBatch K-Means
+
+Sculley, David. "Web-scale k-means clustering." Proceedings of the 19th international conference on
+World wide web. 2010. Manuscript available at: https://www.eecs.tufts.edu/~dsculley/papers/fastkmeans.pdf
+
+NOTE: In the original mini-batch K-Means paper by David Sculley, the SGD updates were applied per sample
+in a mini-batch. In this implementation, in order to make things faster, the updates are applied per
+mini-batch by taking a sum over the mini-batch samples within the class, similar to the original K-Means
+algorithm. Another difference to the original method in the paper is that one mini-batch is generated
+randomly at each iteration by sampling the original dataset, while in this implementation, the entire
+dataset is shuffled, split into mini-batches all of which are processed at each iteration.
 """
 import numpy as np
 import torch
@@ -65,7 +75,7 @@ class MiniBatchKMeans(_BaseKMeans):
 
         Parameters
         ----------
-        dataloader : torch.utils.data.DataLoader
+        dataloader : torch.utils.data.DataLoader[KMeansDataset]
 
         Returns
         -------
@@ -86,7 +96,7 @@ class MiniBatchKMeans(_BaseKMeans):
 
         Parameters
         ----------
-        dataloader : torch.utils.data.DataLoader
+        dataloader : torch.utils.data.DataLoader[KMeansDataset]
 
         Returns
         -------
@@ -122,7 +132,7 @@ class MiniBatchKMeans(_BaseKMeans):
 
         Parameters
         ----------
-        dataloader : torch.utils.data.DataLoader
+        dataloader : torch.utils.data.DataLoader[KMeansDataset]
 
         Returns
         -------
@@ -154,7 +164,7 @@ class MiniBatchKMeans(_BaseKMeans):
 
         Parameters
         ----------
-        dataloader : torch.utils.data.DataLoader
+        dataloader : torch.utils.data.DataLoader[KMeansDataset]
 
         Returns
         -------
@@ -170,7 +180,18 @@ class MiniBatchKMeans(_BaseKMeans):
         self.n_iter_ = itr + 1
         return self
 
-    def _fit_epoch(self, dataloader):
+    def _fit_iter(self, dataloader):
+        """
+        Performs one iteration of the mini-batch K-Means and updates the centroids.
+
+        Parameters
+        ----------
+        dataloader : torch.utils.data.DataLoader[KMeansDataset]
+
+        Returns
+        -------
+        self
+        """
         # TODO: Cleaner and faster implementation
         inertia_ = 0
         for x, x_norm in dataloader:
@@ -188,11 +209,12 @@ class MiniBatchKMeans(_BaseKMeans):
 
     def transform(self, dataloader):
         """
-        Assigns the samples given to the clusters w.r.t the centroid coordinates and metric.
+        Assigns the samples in the dataloader given to the clusters w.r.t the centroid coordinates
+        and metric.
 
         Parameters
         ----------
-        dataloader : torch.utils.data.DataLoader
+        dataloader : torch.utils.data.DataLoader[KMeansDataset]
 
         Returns
         -------
@@ -210,7 +232,7 @@ class MiniBatchKMeans(_BaseKMeans):
 
         Parameters
         ----------
-        x : torch.Tensor
+        x : torch.Tensor of shape (n_samples, n_features)
 
         Returns
         -------
@@ -225,7 +247,7 @@ class MiniBatchKMeans(_BaseKMeans):
 
         Parameters
         ----------
-        dataloader : torch.utils.data.DataLoader
+        dataloader : torch.utils.data.DataLoader[KMeansDataset]
 
         Returns
         -------

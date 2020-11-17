@@ -3,6 +3,9 @@ Torch-based K-Means
 by Ali Hassani
 
 K-Means++ initializer
+
+Arthur, David, and Sergei Vassilvitskii. k-means++: The advantages of careful seeding. Stanford, 2006.
+Manuscript available at: http://theory.stanford.edu/~sergei/papers/kMeansPP-soda.pdf
 """
 import time
 import numpy as np

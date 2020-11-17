@@ -20,6 +20,9 @@ class KMeansDataset(Dataset):
             self.data_norm = row_norm(x) if similarity_based else squared_norm(x)
 
     def random_sample(self, n):
+        """
+        Returns n random samples from the dataset.
+        """
         idx = random.sample(range(self.data.size(0)), n)
         return self.__getitem__(idx)
 
