@@ -34,14 +34,14 @@ class KMeans:
         Maximum K-Means iterations.
 
     metric : 'default' or callable, default='default'
-        Distance metric when spherical=False and similarity metric otherwise. Default is 'default'
+        Distance metric when similarity_based=False and similarity metric otherwise. Default is 'default'
         which uses L2 distance and cosine similarity as the distance and similarity metrics respectively.
         WARNING: This metric does not apply to the pre-defined initialization methods (K-Means++ and DISCERN).
         The callable metrics should take in two tensors of shapes (n, d) and (m, d) and return a tensor of
         shape (n, m).
 
-    spherical : bool, default=False
-        Whether to use cosine similarity as the assignment metric or not.
+    similarity_based : bool, default=False
+        Whether the metric is a similarity metric or not.
 
     eps : float, default=1e-6
         Threshold for early stopping.
@@ -55,20 +55,20 @@ class KMeans:
         Final centroid coordinates
 
     inertia_ : float
-        Sum of squared errors when not spherical and sum of similarities when spherical
+        Sum of squared errors when not similarity_based and sum of similarities when similarity_based
 
     n_iter_ : int
         The number of training iterations
     """
     def __init__(self, n_clusters=None, init='k-means++', n_init=10, max_iter=200, metric='default',
-                 spherical=False, eps=1e-6):
+                 similarity_based=False, eps=1e-6):
         self.n_clusters = n_clusters
         self.init_method = init if type(init) is str or callable(init) else 'k-means++'
         self.cluster_centers_ = init if type(init) is torch.Tensor else None
         self.n_init = max(1, int(n_init)) if self.init_method != 'discern' else 1  # DISCERN is deterministic
         self.max_iter = max_iter
         self.metric = metric if callable(metric) else 'default'
-        self.spherical = spherical
+        self.similarity_based = similarity_based
         self.eps = eps
 
         self.center_norm = None
@@ -77,7 +77,7 @@ class KMeans:
         self.n_iter_ = 0
 
     def _normalize(self, x):
-        return row_norm(x) if self.spherical else squared_norm(x)
+        return row_norm(x) if self.similarity_based else squared_norm(x)
 
     def _initialize(self, x, x_norm):
         """
@@ -125,7 +125,8 @@ class KMeans:
         if type(self.n_clusters) is not int:
             raise NotImplementedError("K-Means++ expects the number of clusters, given {}.".format(type(
                 self.n_clusters)))
-        self.cluster_centers_ = k_means_pp(x, n_clusters=self.n_clusters, x_norm=x_norm if not self.spherical else None)
+        self.cluster_centers_ = k_means_pp(x, n_clusters=self.n_clusters,
+                                           x_norm=x_norm if not self.similarity_based else None)
         return self
 
     def _initialize_discern(self, x, x_norm):
@@ -141,7 +142,8 @@ class KMeans:
         -------
         self
         """
-        self.cluster_centers_ = discern(x, n_clusters=self.n_clusters, x_norm=x_norm if self.spherical else None)
+        self.cluster_centers_ = discern(x, n_clusters=self.n_clusters,
+                                        x_norm=x_norm if self.similarity_based else None)
         self.n_clusters = self.cluster_centers_.size(0)
         return self
 
@@ -176,7 +178,7 @@ class KMeans:
         -------
         labels : torch.Tensor of shape (n_samples,)
         """
-        if self.spherical:
+        if self.similarity_based:
             return self._similarity_based_assignment(x, x_norm)
         return self._distance_based_assignment(x, x_norm)
 
@@ -244,7 +246,7 @@ class KMeans:
             n_iter_list[run] = self.n_iter_
             centroid_list.append(self.cluster_centers_)
             label_list.append(self.labels_)
-        best_idx = int(np.argmax(inertia_list) if self.spherical else np.argmin(inertia_list))
+        best_idx = int(np.argmax(inertia_list) if self.similarity_based else np.argmin(inertia_list))
         self.cluster_centers_ = centroid_list[best_idx]
         self.center_norm = self._normalize(self.cluster_centers_)
         self.n_iter_ = n_iter_list[best_idx]
