@@ -13,9 +13,9 @@ from ._kmeanspp import k_means_pp
 from ._discern import discern
 
 
-class KMeans:
+class _BaseKMeans:
     """
-    K-Means
+    Base K-Means : DO NOT USE DIRECTLY
 
     Parameters
     ----------
@@ -79,6 +79,66 @@ class KMeans:
     def _normalize(self, x):
         return row_norm(x) if self.similarity_based else squared_norm(x)
 
+    def _assign(self, x, x_norm=None):
+        """
+        Takes a set of samples and assigns them to the clusters w.r.t the centroid coordinates and metric.
+
+        Parameters
+        ----------
+        x : torch.Tensor of shape (n_samples, n_features)
+        x_norm : torch.Tensor of shape (n_samples, ) or shape (n_samples, n_features), or NoneType
+
+        Returns
+        -------
+        labels : torch.Tensor of shape (n_samples,)
+        """
+        if self.similarity_based:
+            return self._similarity_based_assignment(x, x_norm)
+        return self._distance_based_assignment(x, x_norm)
+
+    def _distance_based_assignment(self, x, x_norm=None):
+        """
+        Takes a set of samples and assigns them using the metric to the clusters w.r.t the centroid coordinates.
+
+        Parameters
+        ----------
+        x : torch.Tensor of shape (n_samples, n_features)
+        x_norm : torch.Tensor of shape (n_samples, ) or NoneType
+
+        Returns
+        -------
+        labels : torch.Tensor of shape (n_samples,)
+        """
+        if callable(self.metric):
+            dist = self.metric(x, self.cluster_centers_)
+        else:
+            dist = distance_matrix(x, self.cluster_centers_, x_norm=x_norm, y_norm=self.center_norm)
+        return torch.argmin(dist, dim=1), torch.sum(torch.min(dist, dim=1).values)
+
+    def _similarity_based_assignment(self, x, x_norm):
+        """
+        Takes a set of samples and assigns them using the metric to the clusters w.r.t the centroid coordinates.
+
+        Parameters
+        ----------
+        x : torch.Tensor of shape (n_samples, n_features)
+        x_norm : torch.Tensor of shape (n_samples, n_features)
+
+        Returns
+        -------
+        labels : torch.Tensor of shape (n_samples,)
+        """
+        if callable(self.metric):
+            dist = self.metric(x, self.cluster_centers_)
+        else:
+            dist = similarity_matrix(x_norm, self.center_norm, pre_normalized=True)
+        return torch.argmax(dist, dim=1), torch.sum(torch.max(dist, dim=1).values)
+
+
+class KMeans(_BaseKMeans):
+    """
+    K-Means
+    """
     def _initialize(self, x, x_norm):
         """
         Initializes the centroid coordinates.
@@ -165,61 +225,6 @@ class KMeans:
         self.cluster_centers_ = x[random.sample(range(x.size(0)), self.n_clusters), :]
         return self
 
-    def _assign(self, x, x_norm=None):
-        """
-        Takes a set of samples and assigns them to the clusters w.r.t the centroid coordinates and metric.
-
-        Parameters
-        ----------
-        x : torch.Tensor of shape (n_samples, n_features)
-        x_norm : torch.Tensor of shape (n_samples, ) or shape (n_samples, n_features), or NoneType
-
-        Returns
-        -------
-        labels : torch.Tensor of shape (n_samples,)
-        """
-        if self.similarity_based:
-            return self._similarity_based_assignment(x, x_norm)
-        return self._distance_based_assignment(x, x_norm)
-
-    def _distance_based_assignment(self, x, x_norm=None):
-        """
-        Takes a set of samples and assigns them using the metric to the clusters w.r.t the centroid coordinates.
-
-        Parameters
-        ----------
-        x : torch.Tensor of shape (n_samples, n_features)
-        x_norm : torch.Tensor of shape (n_samples, ) or NoneType
-
-        Returns
-        -------
-        labels : torch.Tensor of shape (n_samples,)
-        """
-        if callable(self.metric):
-            dist = self.metric(x, self.cluster_centers_)
-        else:
-            dist = distance_matrix(x, self.cluster_centers_, x_norm=x_norm, y_norm=self.center_norm)
-        return torch.argmin(dist, dim=1), torch.sum(torch.min(dist, dim=1).values)
-
-    def _similarity_based_assignment(self, x, x_norm):
-        """
-        Takes a set of samples and assigns them using the metric to the clusters w.r.t the centroid coordinates.
-
-        Parameters
-        ----------
-        x : torch.Tensor of shape (n_samples, n_features)
-        x_norm : torch.Tensor of shape (n_samples, n_features)
-
-        Returns
-        -------
-        labels : torch.Tensor of shape (n_samples,)
-        """
-        if callable(self.metric):
-            dist = self.metric(x, self.cluster_centers_)
-        else:
-            dist = similarity_matrix(x_norm, self.center_norm, pre_normalized=True)
-        return torch.argmax(dist, dim=1), torch.sum(torch.max(dist, dim=1).values)
-
     def fit(self, x):
         """
         Initializes and fits the centroids using the samples given w.r.t the metric.
@@ -266,6 +271,7 @@ class KMeans:
         -------
         self
         """
+        self.inertia_ = None
         for itr in range(self.max_iter):
             self.n_iter_ = itr
             labels, inertia = self._assign(x, x_norm)
