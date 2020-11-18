@@ -17,6 +17,7 @@ dataset is shuffled, split into mini-batches all of which are processed at each 
 import numpy as np
 import torch
 from .kmeans import _BaseKMeans
+from ._kmeanspp import k_means_pp
 
 
 class MiniBatchKMeans(_BaseKMeans):
@@ -110,21 +111,26 @@ class MiniBatchKMeans(_BaseKMeans):
         self.center_norm = self._normalize(self.cluster_centers_)
         return self
 
-    def _initialize_kpp(self, x, x_norm):
+    def _initialize_kpp(self, dataloader):
         """
         Initializes the centroid coordinates using K-Means++.
 
         Parameters
         ----------
-        x : torch.Tensor of shape (n_samples, n_features)
-        x_norm : torch.Tensor of shape (n_samples, ) or shape (n_samples, n_features), or NoneType
+        dataloader : torch.utils.data.DataLoader[KMeansDataset]
 
         Returns
         -------
         self
         """
-        # TODO: Implement MiniBatch K++
-        raise NotImplementedError
+        # TODO: Mini-batch K-Means++
+        if type(self.n_clusters) is not int:
+            raise NotImplementedError("K-Means++ expects the number of clusters, given {}.".format(type(
+                self.n_clusters)))
+        x, x_norm = next(iter(dataloader))
+        self.cluster_centers_ = k_means_pp(x, n_clusters=self.n_clusters,
+                                           x_norm=x_norm if not self.similarity_based else None)
+        return self
 
     def fit(self, dataloader):
         """
