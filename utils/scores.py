@@ -1,5 +1,4 @@
-import numpy as np
-from sklearn import preprocessing
+import torch
 
 
 def purity_score(y_true, y_pred):
@@ -8,29 +7,24 @@ def purity_score(y_true, y_pred):
 
     Parameters
     ----------
-    y_true : Tensor of type Int or Long and of shape (n_samples, )
+    y_true : torch.Tensor[int] or torch.Tensor[long] and of shape (n_samples, )
         Ground truth labels
 
-    y_pred : Tensor of type Int or Long and of shape (n_samples, )
+    y_pred : torch.Tensor[int] or torch.Tensor[long] and of shape (n_samples, )
         Predicted labels
 
     Returns
     -------
     accuracy : float
     """
-    y_true_np = y_true.cpu().numpy()
-    y_pred_np = y_pred.cpu().numpy()
-    # Encoding the true labels, just to be on the safe side
-    label_encoder = preprocessing.LabelEncoder()
-    y = label_encoder.fit_transform(y_true_np)
+    n = y_true.size(0)
+    unique_classes = y_true.unique()
+    unique_clusters = y_pred.unique()
+    num_classes = len(unique_classes)
+    num_clusters = len(unique_clusters)
+    class_to_idx = {int(unique_classes[i]): i for i in range(num_classes)}
 
-    # Calculate purity score
-    num_class = len(np.unique(y_true_np))
-    num_clusters = len(np.unique(y_pred_np))
-    lbl = np.unique(y_pred_np)
-    scores = np.zeros((num_class, num_clusters))
-    for i in range(0, len(y)):
-        scores[y[i], np.where(lbl == y_pred_np[i])[0]] += 1
-    acc = np.sum(np.max(scores, axis=0))
-    acc /= len(y)
-    return acc
+    scores = torch.zeros((num_classes, num_clusters), dtype=torch.int16, device=y_true.device)
+    for i in range(n):
+        scores[class_to_idx[int(y_true[i])], int(y_pred[i])] += 1
+    return scores.max(0).values.sum().item() / n
