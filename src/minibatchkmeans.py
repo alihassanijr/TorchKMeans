@@ -29,7 +29,7 @@ class MiniBatchKMeans(_BaseKMeans):
     n_clusters : int
         The number of clusters or `K`.
 
-    init : 'random' or torch.Tensor of shape (n_clusters, n_features)
+    init : 'random', 'k-means++' or torch.Tensor of shape (n_clusters, n_features)
         Tensor of the initial centroid coordinates, one of the pre-defined methods {'random'}.
 
     n_init : int, default=10
@@ -64,9 +64,9 @@ class MiniBatchKMeans(_BaseKMeans):
     n_iter_ : int
         The number of training iterations
     """
-    def __init__(self, n_clusters=None, init='random', n_init=10, max_iter=200, metric='default',
+    def __init__(self, n_clusters=None, init='k-means++', n_init=10, max_iter=200, metric='default',
                  similarity_based=False, eps=1e-6):
-        init = init if type(init) is torch.Tensor else 'random'
+        init = init if type(init) is torch.Tensor else 'k-means++'
         super(MiniBatchKMeans, self).__init__(n_clusters=n_clusters, init=init, n_init=n_init, max_iter=max_iter,
                                               metric=metric, similarity_based=similarity_based, eps=eps)
 
@@ -85,7 +85,9 @@ class MiniBatchKMeans(_BaseKMeans):
         self.labels_ = None
         self.inertia_ = 0
         self.n_iter_ = 0
-        if self.init_method == 'random':
+        if self.init_method == 'k-means++':
+            self._initialize_kpp(dataloader)
+        elif self.init_method == 'random':
             self._initialize_random(dataloader)
         else:
             raise NotImplementedError("Initialization `{}` not supported.".format(self.cluster_centers_))
