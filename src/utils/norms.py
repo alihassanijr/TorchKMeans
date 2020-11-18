@@ -37,4 +37,4 @@ def row_norm(x):
     -------
     x_normalized : torch.Tensor of shape (n, m)
     """
-    return F.normalize(x, p=2, dim=1)
+    return F.normalize(x, p=1, dim=1)
