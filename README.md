@@ -13,8 +13,6 @@ Here's the progress so far:
 
 :white_check_mark: K-Means
 
-:x: Multiple initializations
-
 :white_check_mark: Similarity-based K-Means (Spherical K-Means)
 
 :white_check_mark: Custom metrics for K-Means
@@ -27,6 +25,6 @@ Here's the progress so far:
 
 :white_check_mark: MiniBatch K-Means
 
-:black_square_button: MiniBatch K-Means optimized by torch.optim
+:black_square_button: (Testing) ßMiniBatch K-Means++ initialization
 
-:black_square_button: MiniBatch K-Means++ initialization
+:black_square_button: MiniBatch K-Means optimized by torch.optim
