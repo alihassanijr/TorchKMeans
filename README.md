@@ -13,6 +13,8 @@ Here's the progress so far:
 
 :white_check_mark: K-Means
 
+:x: Multiple initializations
+
 :white_check_mark: Similarity-based K-Means (Spherical K-Means)
 
 :white_check_mark: Custom metrics for K-Means
