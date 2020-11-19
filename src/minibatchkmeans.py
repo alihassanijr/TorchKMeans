@@ -181,7 +181,7 @@ class MiniBatchKMeans(_BaseKMeans):
         self.inertia_ = None
         self.cluster_counts = np.zeros(self.n_clusters, dtype=int)
         for itr in range(self.max_iter):
-            inertia = self._fit_epoch(dataloader)
+            inertia = self._fit_iter(dataloader)
             if self.inertia_ is not None and abs(self.inertia_ - inertia) < self.eps:
                 self.inertia_ = inertia
                 break
