@@ -62,8 +62,8 @@ def similarity_matrix(x, y, pre_normalized=False):
     similarity_matrix : torch.Tensor of shape (n, p)
     """
     if pre_normalized:
-        return similarity_validation((1 + x.matmul(y.T) / 2))
-    return similarity_validation((1 + row_norm(x).matmul(row_norm(y).T)) / 2)
+        return similarity_validation((x.matmul(y.T)))
+    return similarity_validation((row_norm(x).matmul(row_norm(y).T)))
 
 
 def self_similarity_matrix(x, pre_normalized=False):
