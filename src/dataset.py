@@ -29,6 +29,10 @@ class KMeansDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
+    @property
+    def dim(self):
+        return self.data.shape[1]
+
     def __getitem__(self, idx):
         if self.data_norm is not None:
             return self.data[idx, :], self.data_norm[idx, :]
