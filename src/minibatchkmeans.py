@@ -33,7 +33,8 @@ class MiniBatchKMeans(_BaseKMeans):
         Tensor of the initial centroid coordinates, one of the pre-defined methods {'random'}.
 
     n_init : int, default=10
-        Number of initializations.
+        Ignored (Number of initializations).
+        NOTE: not yet supported.
 
     max_iter : int, default=200
         Maximum K-Means iterations.
@@ -67,7 +68,7 @@ class MiniBatchKMeans(_BaseKMeans):
     def __init__(self, n_clusters=None, init='k-means++', n_init=10, max_iter=200, metric='default',
                  similarity_based=False, eps=1e-6):
         init = init if type(init) is torch.Tensor else 'k-means++'
-        super(MiniBatchKMeans, self).__init__(n_clusters=n_clusters, init=init, n_init=n_init, max_iter=max_iter,
+        super(MiniBatchKMeans, self).__init__(n_clusters=n_clusters, init=init, max_iter=max_iter,
                                               metric=metric, similarity_based=similarity_based, eps=eps)
 
     def _initialize(self, dataloader):
@@ -146,38 +147,7 @@ class MiniBatchKMeans(_BaseKMeans):
         -------
         self
         """
-        inertia_list = np.zeros(self.n_init, dtype=float)
-        n_iter_list = np.zeros(self.n_init, dtype=int)
-        centroid_list = []
-        label_list = []
-        for run in range(self.n_init):
-            self._initialize(dataloader)
-            self._fit(dataloader)
-            if self.n_init < 2:
-                return self
-            inertia_list[run] = self.inertia_
-            n_iter_list[run] = self.n_iter_
-            centroid_list.append(self.cluster_centers_)
-            label_list.append(self.labels_)
-        best_idx = int(np.argmax(inertia_list) if self.similarity_based else np.argmin(inertia_list))
-        self.cluster_centers_ = centroid_list[best_idx]
-        self.center_norm = self._normalize(self.cluster_centers_)
-        self.n_iter_ = n_iter_list[best_idx]
-        self.inertia_ = inertia_list[best_idx]
-        return self
-
-    def _fit(self, dataloader):
-        """
-        Fits the centroids using the samples given w.r.t the metric.
-
-        Parameters
-        ----------
-        dataloader : torch.utils.data.DataLoader[KMeansDataset]
-
-        Returns
-        -------
-        self
-        """
+        self._initialize(dataloader)
         self.inertia_ = None
         self.cluster_counts = np.zeros(self.n_clusters, dtype=int)
         for itr in range(self.max_iter):

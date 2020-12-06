@@ -27,8 +27,8 @@ class _BaseKMeans:
         'discern'} or callable taking the training data as input and returning the centroid coordinates.
 
     n_init : int, default=10
-        Number of initializations, ignored if init is torch.Tensor or init='discern', since DISCERN is
-        deterministic.
+        Ignored (Number of initializations).
+        NOTE: not yet supported.
 
     max_iter : int, default=200
         Maximum K-Means iterations.
@@ -65,7 +65,6 @@ class _BaseKMeans:
         self.n_clusters = n_clusters
         self.init_method = init if type(init) is str or callable(init) else 'k-means++'
         self.cluster_centers_ = init if type(init) is torch.Tensor else None
-        self.n_init = max(1, int(n_init)) if self.init_method != 'discern' else 1  # DISCERN is deterministic
         self.max_iter = max_iter
         self.metric = metric if callable(metric) else 'default'
         self.similarity_based = similarity_based
@@ -241,39 +240,7 @@ class KMeans(_BaseKMeans):
         self
         """
         x_norm = self._normalize(x)
-        inertia_list = np.zeros(self.n_init, dtype=float)
-        n_iter_list = np.zeros(self.n_init, dtype=int)
-        centroid_list = []
-        label_list = []
-        for run in range(self.n_init):
-            self._initialize(x, x_norm)
-            self._fit(x, x_norm)
-            if self.n_init < 2:
-                return self
-            inertia_list[run] = self.inertia_
-            n_iter_list[run] = self.n_iter_
-            centroid_list.append(self.cluster_centers_)
-            label_list.append(self.labels_)
-        best_idx = int(np.argmax(inertia_list) if self.similarity_based else np.argmin(inertia_list))
-        self.cluster_centers_ = centroid_list[best_idx]
-        self.center_norm = self._normalize(self.cluster_centers_)
-        self.n_iter_ = n_iter_list[best_idx]
-        self.inertia_ = inertia_list[best_idx]
-        return self
-
-    def _fit(self, x, x_norm):
-        """
-        Fits the centroids using the samples given w.r.t the metric.
-
-        Parameters
-        ----------
-        x : torch.Tensor of shape (n_samples, n_features)
-        x_norm : torch.Tensor of shape (n_samples, ) or shape (n_samples, n_features)
-
-        Returns
-        -------
-        self
-        """
+        self._initialize(x, x_norm)
         self.inertia_ = None
         for itr in range(self.max_iter):
             labels, inertia = self._assign(x, x_norm)
