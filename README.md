@@ -25,6 +25,8 @@ Here's the progress so far:
 
 :white_check_mark: MiniBatch K-Means
 
-:black_square_button: (Testing) ßMiniBatch K-Means++ initialization
+:black_square_button: (Testing) MiniBatch K-Means++ initialization
 
-:black_square_button: MiniBatch K-Means optimized by torch.optim
+:black_square_button: (In progress)MiniBatch K-Means optimized by torch.optim
+
+&nbsp;&nbsp; Successful implementation, much faster than the previous MiniBatch K-Means implementation, but not as accurate.
